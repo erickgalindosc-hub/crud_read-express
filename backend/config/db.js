@@ -1,26 +1,27 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-const connectionString = process.env.DATABASE_URL;
-const hasIndividualSettings = process.env.DB_HOST && process.env.DB_USER && process.env.DB_NAME;
-
-if ((!connectionString || connectionString.includes('REGION')) && !hasIndividualSettings) {
-  throw new Error('Configura DATABASE_URL o DB_HOST, DB_USER y DB_NAME en el archivo .env.');
-}
+// Configuración dinámica: prioriza DATABASE_URL (usado en Render) o usa variables individuales
+const poolConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: {
+        rejectUnauthorized: false
+      }
+    }
+  : {
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      port: Number(process.env.DB_PORT || 6543),
+      ssl: {
+        rejectUnauthorized: false
+      }
+    };
 
 const pool = new Pool({
-  ...(connectionString && !connectionString.includes('REGION')
-    ? { connectionString }
-    : {
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        port: Number(process.env.DB_PORT || 5432)
-      }),
-  ssl: {
-    rejectUnauthorized: false
-  },
+  ...poolConfig,
   connectionTimeoutMillis: 10000
 });
 
